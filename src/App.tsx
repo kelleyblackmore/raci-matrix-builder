@@ -18,9 +18,9 @@ interface MatrixData {
 }
 
 function App() {
-  const [roles = [], setRoles] = useKV<string[]>('raci-roles', [])
-  const [tasks = [], setTasks] = useKV<string[]>('raci-tasks', [])
-  const [matrix = {}, setMatrix] = useKV<MatrixData>('raci-matrix', {})
+  const [roles, setRoles] = useKV<string[]>('raci-roles', [])
+  const [tasks, setTasks] = useKV<string[]>('raci-tasks', [])
+  const [matrix, setMatrix] = useKV<MatrixData>('raci-matrix', {})
   
   const [newRole, setNewRole] = useState('')
   const [newTask, setNewTask] = useState('')
@@ -30,22 +30,22 @@ function App() {
 
   const addRole = () => {
     if (newRole.trim()) {
-      setRoles((current = []) => [...current, newRole.trim()])
+      setRoles((current) => [...(current ?? []), newRole.trim()])
       setNewRole('')
     }
   }
 
   const addTask = () => {
     if (newTask.trim()) {
-      setTasks((current = []) => [...current, newTask.trim()])
+      setTasks((current) => [...(current ?? []), newTask.trim()])
       setNewTask('')
     }
   }
 
   const deleteRole = (index: number) => {
-    setRoles((current = []) => current.filter((_, i) => i !== index))
-    setMatrix((current = {}) => {
-      const updated = { ...current }
+    setRoles((current) => (current ?? []).filter((_, i) => i !== index))
+    setMatrix((current) => {
+      const updated = { ...(current ?? {}) }
       Object.keys(updated).forEach(taskId => {
         if (updated[taskId]) {
           delete updated[taskId][index.toString()]
@@ -56,9 +56,9 @@ function App() {
   }
 
   const deleteTask = (index: number) => {
-    setTasks((current = []) => current.filter((_, i) => i !== index))
-    setMatrix((current = {}) => {
-      const updated = { ...current }
+    setTasks((current) => (current ?? []).filter((_, i) => i !== index))
+    setMatrix((current) => {
+      const updated = { ...(current ?? {}) }
       delete updated[index.toString()]
       return updated
     })
@@ -66,8 +66,8 @@ function App() {
 
   const updateRole = (index: number, value: string) => {
     if (value.trim()) {
-      setRoles((current = []) => {
-        const updated = [...current]
+      setRoles((current) => {
+        const updated = [...(current ?? [])]
         updated[index] = value.trim()
         return updated
       })
@@ -77,8 +77,8 @@ function App() {
 
   const updateTask = (index: number, value: string) => {
     if (value.trim()) {
-      setTasks((current = []) => {
-        const updated = [...current]
+      setTasks((current) => {
+        const updated = [...(current ?? [])]
         updated[index] = value.trim()
         return updated
       })
@@ -87,8 +87,8 @@ function App() {
   }
 
   const cycleRACIValue = (taskIndex: number, roleIndex: number) => {
-    setMatrix((current = {}) => {
-      const updated = { ...current }
+    setMatrix((current) => {
+      const updated = { ...(current ?? {}) }
       if (!updated[taskIndex]) {
         updated[taskIndex] = {}
       }
@@ -117,8 +117,13 @@ function App() {
     setLoadingCell(cellKey)
     
     try {
-      const task = tasks[taskIndex]
-      const role = roles[roleIndex]
+      const task = tasks?.[taskIndex]
+      const role = roles?.[roleIndex]
+      
+      if (!task || !role) {
+        toast.error('Task or role not found')
+        return
+      }
       
       const promptText = `You are a RACI matrix expert. Given a task and a role, suggest the most appropriate RACI designation.
 
@@ -137,8 +142,8 @@ Based on typical business practices and the nature of this task and role, what i
       const suggestion = response.trim().toUpperCase()
       
       if (['R', 'A', 'C', 'I'].includes(suggestion)) {
-        setMatrix((current = {}) => {
-          const updated = { ...current }
+        setMatrix((current) => {
+          const updated = { ...(current ?? {}) }
           if (!updated[taskIndex]) {
             updated[taskIndex] = {}
           }
@@ -157,7 +162,7 @@ Based on typical business practices and the nature of this task and role, what i
     }
   }
 
-  const hasData = roles.length > 0 || tasks.length > 0
+  const hasData = (roles?.length ?? 0) > 0 || (tasks?.length ?? 0) > 0
 
   return (
     <TooltipProvider>
@@ -212,11 +217,11 @@ Based on typical business practices and the nature of this task and role, what i
                   <ScrollArea className="w-full">
                     <div className="min-w-max">
                       <div className="grid gap-0 border rounded-lg overflow-hidden" style={{
-                        gridTemplateColumns: `200px repeat(${roles.length}, 140px)`
+                        gridTemplateColumns: `200px repeat(${roles?.length ?? 0}, 140px)`
                       }}>
                         <div className="bg-muted border-b border-r p-3 font-semibold sticky left-0 z-10"></div>
                         
-                        {roles.map((role, roleIndex) => (
+                        {roles?.map((role, roleIndex) => (
                           <div key={roleIndex} className="bg-muted border-b border-r p-3 flex items-center justify-between gap-2 group">
                             {editingRole === roleIndex ? (
                               <Input
@@ -251,7 +256,7 @@ Based on typical business practices and the nature of this task and role, what i
                           </div>
                         ))}
 
-                        {tasks.map((task, taskIndex) => (
+                        {tasks?.map((task, taskIndex) => (
                           <>
                             <div key={`task-${taskIndex}`} className="bg-muted border-b border-r p-3 flex items-center justify-between gap-2 sticky left-0 z-10 group">
                               {editingTask === taskIndex ? (
@@ -286,8 +291,8 @@ Based on typical business practices and the nature of this task and role, what i
                               )}
                             </div>
 
-                            {roles.map((_, roleIndex) => {
-                              const value = matrix[taskIndex]?.[roleIndex]
+                            {roles?.map((_, roleIndex) => {
+                              const value = matrix?.[taskIndex]?.[roleIndex]
                               const cellKey = `${taskIndex}-${roleIndex}`
                               const isLoading = loadingCell === cellKey
 
