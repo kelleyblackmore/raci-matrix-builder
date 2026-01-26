@@ -257,16 +257,16 @@ Based on typical business practices and the nature of this task and role, what i
                     </p>
                   </div>
                 ) : (
-                  <div className="relative">
-                    <ScrollArea className="h-[600px] w-full">
-                      <div className="min-w-max pb-4">
-                        <div className="grid gap-0 border rounded-lg overflow-hidden" style={{
+                  <div className="relative border rounded-lg overflow-hidden">
+                    <div className="overflow-auto max-h-[600px]">
+                      <div className="min-w-max">
+                        <div className="grid gap-0" style={{
                           gridTemplateColumns: `200px repeat(${roles?.length ?? 0}, 140px)`
                         }}>
-                          <div className="bg-muted border-b border-r p-3 font-semibold sticky left-0 z-10"></div>
+                          <div className="bg-muted border-b border-r p-3 font-semibold sticky left-0 z-20 bg-muted"></div>
                           
                           {roles?.map((role, roleIndex) => (
-                            <div key={roleIndex} className="bg-muted border-b border-r p-3 flex items-center justify-between gap-2 group">
+                            <div key={roleIndex} className="bg-muted border-b border-r p-3 flex items-center justify-between gap-2 group sticky top-0 z-10">
                               {editingRole === roleIndex ? (
                                 <Input
                                   defaultValue={role}
@@ -343,7 +343,7 @@ Based on typical business practices and the nature of this task and role, what i
                                 return (
                                   <div
                                     key={`cell-${taskIndex}-${roleIndex}`}
-                                    className="border-b border-r p-2 relative group hover:bg-accent/5 transition-colors cursor-pointer"
+                                    className="border-b border-r p-2 relative group hover:bg-accent/5 transition-colors cursor-pointer bg-card"
                                     onClick={() => !isLoading && cycleRACIValue(taskIndex, roleIndex)}
                                   >
                                     <div className="flex items-center justify-center gap-1 h-full min-h-[60px]">
@@ -384,7 +384,7 @@ Based on typical business practices and the nature of this task and role, what i
                           ))}
                         </div>
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 )}
               </Card>
