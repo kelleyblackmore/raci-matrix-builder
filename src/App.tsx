@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { Plus, Sparkle, Trash } from '@phosphor-icons/react'
+import { Plus, Sparkle, Trash, DownloadSimple } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -162,15 +162,58 @@ Based on typical business practices and the nature of this task and role, what i
     }
   }
 
+  const exportToCSV = () => {
+    if (!roles?.length || !tasks?.length) {
+      toast.error('No data to export')
+      return
+    }
+
+    const csvRows: string[] = []
+    
+    const headers = ['Task', ...(roles ?? [])]
+    csvRows.push(headers.map(h => `"${h}"`).join(','))
+    
+    tasks?.forEach((task, taskIndex) => {
+      const row = [task]
+      roles?.forEach((_, roleIndex) => {
+        const value = matrix?.[taskIndex]?.[roleIndex] || ''
+        row.push(value)
+      })
+      csvRows.push(row.map(cell => `"${cell}"`).join(','))
+    })
+    
+    const csvContent = csvRows.join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'raci-matrix.csv')
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast.success('Matrix exported to CSV')
+  }
+
   const hasData = (roles?.length ?? 0) > 0 || (tasks?.length ?? 0) > 0
 
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <header className="space-y-2">
-            <h1 className="text-[32px] font-bold tracking-tight">RACI Matrix Builder</h1>
-            <p className="text-muted-foreground">Define roles and tasks, then assign accountability with AI assistance</p>
+          <header className="flex items-center justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-[32px] font-bold tracking-tight">RACI Matrix Builder</h1>
+              <p className="text-muted-foreground">Define roles and tasks, then assign accountability with AI assistance</p>
+            </div>
+            {hasData && (
+              <Button onClick={exportToCSV} className="gap-2">
+                <DownloadSimple className="w-4 h-4" />
+                Export CSV
+              </Button>
+            )}
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -214,59 +257,24 @@ Based on typical business practices and the nature of this task and role, what i
                     </p>
                   </div>
                 ) : (
-                  <ScrollArea className="w-full">
-                    <div className="min-w-max">
-                      <div className="grid gap-0 border rounded-lg overflow-hidden" style={{
-                        gridTemplateColumns: `200px repeat(${roles?.length ?? 0}, 140px)`
-                      }}>
-                        <div className="bg-muted border-b border-r p-3 font-semibold sticky left-0 z-10"></div>
-                        
-                        {roles?.map((role, roleIndex) => (
-                          <div key={roleIndex} className="bg-muted border-b border-r p-3 flex items-center justify-between gap-2 group">
-                            {editingRole === roleIndex ? (
-                              <Input
-                                defaultValue={role}
-                                autoFocus
-                                onBlur={(e) => updateRole(roleIndex, e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    updateRole(roleIndex, e.currentTarget.value)
-                                  }
-                                }}
-                                className="h-7 text-sm"
-                              />
-                            ) : (
-                              <>
-                                <span 
-                                  className="font-medium text-sm flex-1 cursor-pointer"
-                                  onClick={() => setEditingRole(roleIndex)}
-                                >
-                                  {role}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => deleteRole(roleIndex)}
-                                >
-                                  <Trash className="w-3 h-3" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        ))}
-
-                        {tasks?.map((task, taskIndex) => (
-                          <>
-                            <div key={`task-${taskIndex}`} className="bg-muted border-b border-r p-3 flex items-center justify-between gap-2 sticky left-0 z-10 group">
-                              {editingTask === taskIndex ? (
+                  <div className="relative">
+                    <ScrollArea className="h-[600px] w-full">
+                      <div className="min-w-max pb-4">
+                        <div className="grid gap-0 border rounded-lg overflow-hidden" style={{
+                          gridTemplateColumns: `200px repeat(${roles?.length ?? 0}, 140px)`
+                        }}>
+                          <div className="bg-muted border-b border-r p-3 font-semibold sticky left-0 z-10"></div>
+                          
+                          {roles?.map((role, roleIndex) => (
+                            <div key={roleIndex} className="bg-muted border-b border-r p-3 flex items-center justify-between gap-2 group">
+                              {editingRole === roleIndex ? (
                                 <Input
-                                  defaultValue={task}
+                                  defaultValue={role}
                                   autoFocus
-                                  onBlur={(e) => updateTask(taskIndex, e.target.value)}
+                                  onBlur={(e) => updateRole(roleIndex, e.target.value)}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                      updateTask(taskIndex, e.currentTarget.value)
+                                      updateRole(roleIndex, e.currentTarget.value)
                                     }
                                   }}
                                   className="h-7 text-sm"
@@ -275,72 +283,109 @@ Based on typical business practices and the nature of this task and role, what i
                                 <>
                                   <span 
                                     className="font-medium text-sm flex-1 cursor-pointer"
-                                    onClick={() => setEditingTask(taskIndex)}
+                                    onClick={() => setEditingRole(roleIndex)}
                                   >
-                                    {task}
+                                    {role}
                                   </span>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => deleteTask(taskIndex)}
+                                    onClick={() => deleteRole(roleIndex)}
                                   >
                                     <Trash className="w-3 h-3" />
                                   </Button>
                                 </>
                               )}
                             </div>
+                          ))}
 
-                            {roles?.map((_, roleIndex) => {
-                              const value = matrix?.[taskIndex]?.[roleIndex]
-                              const cellKey = `${taskIndex}-${roleIndex}`
-                              const isLoading = loadingCell === cellKey
+                          {tasks?.map((task, taskIndex) => (
+                            <>
+                              <div key={`task-${taskIndex}`} className="bg-muted border-b border-r p-3 flex items-center justify-between gap-2 sticky left-0 z-10 group">
+                                {editingTask === taskIndex ? (
+                                  <Input
+                                    defaultValue={task}
+                                    autoFocus
+                                    onBlur={(e) => updateTask(taskIndex, e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        updateTask(taskIndex, e.currentTarget.value)
+                                      }
+                                    }}
+                                    className="h-7 text-sm"
+                                  />
+                                ) : (
+                                  <>
+                                    <span 
+                                      className="font-medium text-sm flex-1 cursor-pointer"
+                                      onClick={() => setEditingTask(taskIndex)}
+                                    >
+                                      {task}
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => deleteTask(taskIndex)}
+                                    >
+                                      <Trash className="w-3 h-3" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
 
-                              return (
-                                <div
-                                  key={`cell-${taskIndex}-${roleIndex}`}
-                                  className="border-b border-r p-2 relative group hover:bg-accent/5 transition-colors cursor-pointer"
-                                  onClick={() => !isLoading && cycleRACIValue(taskIndex, roleIndex)}
-                                >
-                                  <div className="flex items-center justify-center gap-1 h-full min-h-[60px]">
-                                    {isLoading ? (
-                                      <div className="animate-pulse">
-                                        <Sparkle className="w-5 h-5 text-accent" />
-                                      </div>
-                                    ) : value ? (
-                                      <Badge className={`${getRACIColor(value)} text-base font-bold px-3 py-1`}>
-                                        {value}
-                                      </Badge>
-                                    ) : (
-                                      <span className="text-muted-foreground text-xs">Click</span>
-                                    )}
+                              {roles?.map((_, roleIndex) => {
+                                const value = matrix?.[taskIndex]?.[roleIndex]
+                                const cellKey = `${taskIndex}-${roleIndex}`
+                                const isLoading = loadingCell === cellKey
+
+                                return (
+                                  <div
+                                    key={`cell-${taskIndex}-${roleIndex}`}
+                                    className="border-b border-r p-2 relative group hover:bg-accent/5 transition-colors cursor-pointer"
+                                    onClick={() => !isLoading && cycleRACIValue(taskIndex, roleIndex)}
+                                  >
+                                    <div className="flex items-center justify-center gap-1 h-full min-h-[60px]">
+                                      {isLoading ? (
+                                        <div className="animate-pulse">
+                                          <Sparkle className="w-5 h-5 text-accent" />
+                                        </div>
+                                      ) : value ? (
+                                        <Badge className={`${getRACIColor(value)} text-base font-bold px-3 py-1`}>
+                                          {value}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground text-xs">Click</span>
+                                      )}
+                                    </div>
+                                    
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            suggestRACIValue(taskIndex, roleIndex)
+                                          }}
+                                          disabled={isLoading}
+                                        >
+                                          <Sparkle className="w-3 h-3 text-accent" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>AI Suggestion</TooltipContent>
+                                    </Tooltip>
                                   </div>
-                                  
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          suggestRACIValue(taskIndex, roleIndex)
-                                        }}
-                                        disabled={isLoading}
-                                      >
-                                        <Sparkle className="w-3 h-3 text-accent" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>AI Suggestion</TooltipContent>
-                                  </Tooltip>
-                                </div>
-                              )
-                            })}
-                          </>
-                        ))}
+                                )
+                              })}
+                            </>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </ScrollArea>
+                    </ScrollArea>
+                  </div>
                 )}
               </Card>
             </div>
