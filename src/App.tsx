@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useKV } from '@github/spark/hooks'
-import { Plus, Sparkle, Trash, DownloadSimple } from '@phosphor-icons/react'
+import { Plus, Sparkle, Trash, DownloadSimple, UploadSimple } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -38,6 +38,7 @@ function App() {
   const [editingRole, setEditingRole] = useState<number | null>(null)
   const [editingTask, setEditingTask] = useState<number | null>(null)
   const [loadingCell, setLoadingCell] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const loadUser = async () => {
@@ -223,6 +224,102 @@ Based on typical business practices and the nature of this task and role, what i
     toast.success('Matrix exported to CSV')
   }
 
+  const importFromCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string
+        const lines = text.split('\n').filter(line => line.trim())
+        
+        if (lines.length < 2) {
+          toast.error('CSV file is empty or invalid')
+          return
+        }
+
+        const parseCSVLine = (line: string): string[] => {
+          const result: string[] = []
+          let current = ''
+          let inQuotes = false
+          
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i]
+            
+            if (char === '"') {
+              inQuotes = !inQuotes
+            } else if (char === ',' && !inQuotes) {
+              result.push(current.trim())
+              current = ''
+            } else {
+              current += char
+            }
+          }
+          result.push(current.trim())
+          
+          return result
+        }
+
+        const headers = parseCSVLine(lines[0])
+        const importedRoles = headers.slice(1)
+        
+        if (importedRoles.length === 0) {
+          toast.error('No roles found in CSV')
+          return
+        }
+
+        const importedTasks: string[] = []
+        const importedMatrix: MatrixData = {}
+
+        for (let i = 1; i < lines.length; i++) {
+          const cells = parseCSVLine(lines[i])
+          if (cells.length === 0) continue
+          
+          const task = cells[0]
+          if (!task) continue
+          
+          importedTasks.push(task)
+          const taskIndex = importedTasks.length - 1
+          
+          importedMatrix[taskIndex] = {}
+          
+          for (let j = 1; j < cells.length && j <= importedRoles.length; j++) {
+            const value = cells[j]?.trim().toUpperCase()
+            const roleIndex = j - 1
+            
+            if (value && ['R', 'A', 'C', 'I'].includes(value)) {
+              importedMatrix[taskIndex][roleIndex] = value as RACIValue
+            }
+          }
+        }
+
+        setRoles(importedRoles)
+        setTasks(importedTasks)
+        setMatrix(importedMatrix)
+        
+        toast.success(`Imported ${importedRoles.length} roles and ${importedTasks.length} tasks`)
+      } catch (error) {
+        console.error('Import error:', error)
+        toast.error('Failed to import CSV file')
+      }
+    }
+
+    reader.onerror = () => {
+      toast.error('Failed to read file')
+    }
+
+    reader.readAsText(file)
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
+  }
+
   const hasData = (roles?.length ?? 0) > 0 || (tasks?.length ?? 0) > 0
 
   if (isLoading) {
@@ -249,11 +346,30 @@ Based on typical business practices and the nature of this task and role, what i
             </div>
             <div className="flex items-center gap-3">
               {hasData && (
-                <Button onClick={exportToCSV} className="gap-2">
-                  <DownloadSimple className="w-4 h-4" />
-                  Export CSV
+                <>
+                  <Button onClick={exportToCSV} variant="outline" className="gap-2">
+                    <DownloadSimple className="w-4 h-4" />
+                    Export CSV
+                  </Button>
+                  <Button onClick={triggerFileInput} variant="outline" className="gap-2">
+                    <UploadSimple className="w-4 h-4" />
+                    Import CSV
+                  </Button>
+                </>
+              )}
+              {!hasData && (
+                <Button onClick={triggerFileInput} className="gap-2">
+                  <UploadSimple className="w-4 h-4" />
+                  Import CSV
                 </Button>
               )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={importFromCSV}
+                className="hidden"
+              />
               {user && (
                 <Tooltip>
                   <TooltipTrigger asChild>
