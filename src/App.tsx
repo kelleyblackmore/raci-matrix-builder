@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Plus, Sparkle, Trash, DownloadSimple } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 
 type RACIValue = 'R' | 'A' | 'C' | 'I' | null
@@ -17,16 +17,42 @@ interface MatrixData {
   }
 }
 
+interface UserInfo {
+  avatarUrl: string
+  email: string
+  id: number
+  isOwner: boolean
+  login: string
+}
+
 function App() {
-  const [roles, setRoles] = useKV<string[]>('raci-roles', [])
-  const [tasks, setTasks] = useKV<string[]>('raci-tasks', [])
-  const [matrix, setMatrix] = useKV<MatrixData>('raci-matrix', {})
+  const [user, setUser] = useState<UserInfo | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const [roles, setRoles] = useKV<string[]>(user ? `raci-roles-${user.id}` : 'temp-roles', [])
+  const [tasks, setTasks] = useKV<string[]>(user ? `raci-tasks-${user.id}` : 'temp-tasks', [])
+  const [matrix, setMatrix] = useKV<MatrixData>(user ? `raci-matrix-${user.id}` : 'temp-matrix', {})
   
   const [newRole, setNewRole] = useState('')
   const [newTask, setNewTask] = useState('')
   const [editingRole, setEditingRole] = useState<number | null>(null)
   const [editingTask, setEditingTask] = useState<number | null>(null)
   const [loadingCell, setLoadingCell] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await window.spark.user()
+        setUser(userData)
+      } catch (error) {
+        console.error('Failed to load user:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadUser()
+  }, [])
 
   const addRole = () => {
     if (newRole.trim()) {
@@ -199,6 +225,19 @@ Based on typical business practices and the nature of this task and role, what i
 
   const hasData = (roles?.length ?? 0) > 0 || (tasks?.length ?? 0) > 0
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-pulse">
+            <Sparkle className="w-12 h-12 text-accent mx-auto" />
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background p-4 md:p-8">
@@ -208,12 +247,35 @@ Based on typical business practices and the nature of this task and role, what i
               <h1 className="text-[32px] font-bold tracking-tight">RACI Matrix Builder</h1>
               <p className="text-muted-foreground">Define roles and tasks, then assign accountability with AI assistance</p>
             </div>
-            {hasData && (
-              <Button onClick={exportToCSV} className="gap-2">
-                <DownloadSimple className="w-4 h-4" />
-                Export CSV
-              </Button>
-            )}
+            <div className="flex items-center gap-3">
+              {hasData && (
+                <Button onClick={exportToCSV} className="gap-2">
+                  <DownloadSimple className="w-4 h-4" />
+                  Export CSV
+                </Button>
+              )}
+              {user && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-card border border-border">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatarUrl} alt={user.login} />
+                        <AvatarFallback>{user.login.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{user.login}</span>
+                        {user.isOwner && (
+                          <Badge variant="secondary" className="text-xs w-fit">Owner</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Signed in as {user.email}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

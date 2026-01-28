@@ -1,16 +1,45 @@
 # Planning Guide
 
-A RACI matrix builder that allows teams to define roles and tasks, assign RACI values (Responsible, Accountable, Consulted, Informed), and leverage AI to intelligently suggest appropriate RACI assignments based on role-task combinations.
+A RACI matrix builder that allows teams to define roles and tasks, assign RACI values (Responsible, Accountable, Consulted, Informed), and leverage AI to intelligently suggest appropriate RACI assignments based on role-task combinations. Each user's data is stored separately based on their GitHub account.
 
 **Experience Qualities**:
 1. **Efficient** - Streamlined interface that makes building RACI matrices faster than traditional spreadsheets
 2. **Intelligent** - AI-powered suggestions reduce manual work and provide informed recommendations
-3. **Clear** - Visual organization makes accountability relationships immediately apparent
+3. **Secure** - Each user's matrices are private and stored separately with GitHub authentication
+4. **Clear** - Visual organization makes accountability relationships immediately apparent
 
 **Complexity Level**: Light Application (multiple features with basic state)
-This is a focused productivity tool with several interconnected features (role management, task management, matrix editing, AI suggestions) but operates within a single cohesive view without complex navigation.
+This is a focused productivity tool with several interconnected features (role management, task management, matrix editing, AI suggestions, user authentication) but operates within a single cohesive view without complex navigation.
 
 ## Essential Features
+
+### GitHub Authentication
+- **Functionality**: Automatically authenticate users via GitHub when they access the app
+- **Purpose**: Provide secure, personalized data storage for each user
+- **Trigger**: App load
+- **Progression**: App loads → Fetches GitHub user info → Displays user profile in header → Loads user-specific data
+- **Success criteria**: User sees their GitHub avatar and username in the header, data is isolated per user
+
+### User Profile Display
+- **Functionality**: Show authenticated user's GitHub profile in the header
+- **Purpose**: Confirm authentication status and provide user context
+- **Trigger**: After successful authentication
+- **Progression**: User authenticated → Avatar and username display in header → Hover shows full email → Owner badge displayed if applicable
+- **Success criteria**: User profile visible in header with avatar, username, and owner badge when applicable
+
+### User Profile Display
+- **Functionality**: Show authenticated user's GitHub profile in the header
+- **Purpose**: Confirm authentication status and provide user context
+- **Trigger**: After successful authentication
+- **Progression**: User authenticated → Avatar and username display in header → Hover shows full email → Owner badge displayed if applicable
+- **Success criteria**: User profile visible in header with avatar, username, and owner badge when applicable
+
+### User-Specific Data Storage
+- **Functionality**: Store each user's roles, tasks, and matrix data separately using their GitHub user ID
+- **Purpose**: Allow multiple users to have their own private RACI matrices
+- **Trigger**: Any data modification (add role, add task, update cell, etc.)
+- **Progression**: User makes change → Data saved to user-specific key (e.g., `raci-roles-{userId}`) → Data persists for that user only
+- **Success criteria**: Different users see different data, no data overlap between users
 
 ### Role Management
 - **Functionality**: Add, edit, and remove roles (columns in the matrix)
@@ -40,6 +69,13 @@ This is a focused productivity tool with several interconnected features (role m
 - **Progression**: Click AI icon on cell → Loading indicator appears → AI analyzes role and task → Suggested RACI value appears with option to accept or reject
 - **Success criteria**: AI provides contextually relevant suggestions within 2-3 seconds, suggestions are accurate >80% of the time
 
+### CSV Export
+- **Functionality**: Export the current matrix to a CSV file for use in other tools
+- **Purpose**: Allow users to share or archive their RACI matrices
+- **Trigger**: User clicks "Export CSV" button
+- **Progression**: Click export → CSV generated with headers and all data → File downloads automatically
+- **Success criteria**: CSV file opens correctly in spreadsheet applications with proper formatting
+
 ### Interactive Legend
 - **Functionality**: Display persistent legend explaining RACI acronym meanings
 - **Purpose**: Educate users and serve as quick reference
@@ -49,6 +85,8 @@ This is a focused productivity tool with several interconnected features (role m
 
 ## Edge Case Handling
 
+- **Authentication Failures**: Show helpful error message if GitHub authentication fails, with retry option
+- **User Without Access**: Handle cases where user data cannot be loaded gracefully
 - **Empty Matrix**: Display helpful onboarding state prompting users to add their first role and task
 - **No Roles or Tasks**: Disable AI suggestions and show guidance to add roles/tasks first
 - **AI Failures**: Gracefully handle API errors with retry option and fallback messaging
